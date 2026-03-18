@@ -12,34 +12,34 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-    ##############################
+      ##############################
 
-    ### When selected package manager, uncomment below.
+      ### When selected package manager, uncomment below.
 
-      - name: You have to select a package manager.
-        run: exit 1
+      # - name: You have to select a package manager.
+      #   run: exit 1
 
-    ###   pnpm   ###
+      ###   pnpm   ###
 
-      # - name: Install pnpm
-      #   uses: pnpm/action-setup@v4
-      #   with:
-      #     version: 10
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10
 
-      # - name: Use Node.js 24
-      #   uses: actions/setup-node@v4
-      #   with:
-      #     node-version: "24"
-      #     cache: "pnpm"
+      - name: Use Node.js 24
+        uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: "pnpm"
 
-      # - name: Install dependencies
-      #   run: |
-      #     pnpm i --frozen-lockfile
-          
-      # - name: Build
-      #   run: pnpm run build
+      - name: Install dependencies
+        run: |
+          pnpm i --frozen-lockfile
 
-    ###   npm   ###
+      - name: Build
+        run: pnpm run build
+
+      ###   npm   ###
 
       # - name: Use Node.js 24
       #   uses: actions/setup-node@v4
@@ -55,7 +55,7 @@ jobs:
       #   run: |
       #     npm run build
 
-    ###   bun   ###
+      ###   bun   ###
 
       # - name: Use Node.js 24
       #   uses: actions/setup-node@v4
@@ -73,7 +73,7 @@ jobs:
       #   run: |
       #     bun run build
 
-    ###   yarn   ###
+      ###   yarn   ###
 
       # - name: Use Node.js 24
       #   uses: actions/setup-node@v4
@@ -91,7 +91,7 @@ jobs:
       #   with:
       #     cmd: build
 
-    ##############################
+      ##############################
 
       - name: Get Pack Name
         id: get-name
