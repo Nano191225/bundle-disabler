@@ -4,42 +4,57 @@ import { Block, Container, Entity, ItemStack, system, Vector3, world } from "@mi
 ブロックがインベントリを持っていたら各スロットをすべてチェック
 スロットのアイテムがバンドルなら削除 */
 
-const CHECK_INTERVAL = world.getPackSettings()['tn:check_interval'] as number;
-
 world.afterEvents.worldLoad.subscribe(() => {
   console.info('[BundleDisabler] Loaded!');
-  console.info(`[BundleDisabler] 半径: ${world.getPackSettings()['tn:radius']}ブロック, チェック間隔: ${CHECK_INTERVAL}tick`);
+  console.info(`[BundleDisabler] 半径: ${world.getPackSettings()['tn:radius']}ブロック`);
 });
 
-system.runInterval(() => {
-  const radius = world.getPackSettings()['tn:radius'] as number;
-  for (const player of world.getPlayers()) {
-    const { x, y, z } = player.location;
-    const range = player.dimension.heightRange;
+let elapsedProcessTimes: number[] = [];
+let adjustedRadius = world.getPackSettings()['tn:radius'] as number;
+const allowedProcessTime = world.getPackSettings()['tn:process_time'] as number;
 
-    for (let dx = -radius; dx <= radius; dx++) {
-      for (let dy = -radius; dy <= radius; dy++) {
-        for (let dz = -radius; dz <= radius; dz++) {
-          const pos = { x: x + dx, y: y + dy, z: z + dz };
-          if (pos.y < range.min || range.max < pos.y) continue;
-          const block = player.dimension.getBlock(pos);
-          if (!block) continue;
-          checkBlock(block);
-        }
+system.runInterval(() => {
+  const time = Date.now();
+  const players = world.getPlayers();
+  const player = players[system.currentTick % players.length];
+  if (!player?.isValid) return;
+
+  const { x: bx, y: by, z: bz } = player.location;
+  const range = player.dimension.heightRange;
+
+  for (let y = Math.max(range.min, by - adjustedRadius); y <= Math.min(range.max, by + adjustedRadius); y++) {
+    for (let dx = -adjustedRadius; dx <= adjustedRadius; dx++) {
+      for (let dz = -adjustedRadius; dz <= adjustedRadius; dz++) {
+        const pos = { x: bx + dx, y, z: bz + dz };
+        const block = player.dimension.getBlock(pos);
+        if (!block) continue;
+        checkBlock(block);
       }
     }
+  }
 
-    // entity
-    const entities = player.dimension.getEntities({
-      location: player.location,
-      maxDistance: radius,
-    });
+  // entity
+  const entities = player.dimension.getEntities({
+    location: player.location,
+    maxDistance: adjustedRadius,
+  });
 
-    for (const entity of entities) {
-      checkEntity(entity);
+  for (const entity of entities) {
+    checkEntity(entity);
+  }
+  const elapsed = Date.now() - time;
+  // if (elapsed > 1) console.warn(`[BundleDisabler] チェックに ${elapsed}ms かかりました (プレイヤー: ${player.name})`);
+  elapsedProcessTimes.push(elapsed);
+  if (elapsedProcessTimes.length > 5) {
+    elapsedProcessTimes.shift();
+    const average = elapsedProcessTimes.reduce((a, b) => a + b, 0) / elapsedProcessTimes.length;
+    if (average > allowedProcessTime) {
+      adjustedRadius = Math.max(0, adjustedRadius - 1);
+      console.warn(`[BundleDisabler] 平均処理時間 ${average.toFixed(2)}ms が許容値 ${allowedProcessTime}ms を超えたため、半径を ${adjustedRadius} に減らしました`);
+      elapsedProcessTimes = [];
     }
   }
-}, CHECK_INTERVAL);
+});
 
 world.afterEvents.playerInteractWithBlock.subscribe(ev => {
   const block = ev.block;
